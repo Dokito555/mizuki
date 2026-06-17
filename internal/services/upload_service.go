@@ -122,6 +122,20 @@ func (s *UploadService) CancelUpload(uploadID uint) bool {
 
 func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os.File) {
 	tmpPath := file.Name()
+
+	// defer func() {
+	// 	if r := recover(); r != nil {
+	// 		s.log.WithField("upload_id", uploadID).Errorf("pipeline panic: %v", r)
+	// 		upload, err := s.uploadRepo.FindByID(ctx, uploadID)
+	// 		if err == nil {
+	// 			upload.Status = entities.UploadError
+	// 			upload.ErrorMsg = fmt.Sprintf("panic: %v", r)
+	// 			upload.ProgressPct = 100
+	// 			s.uploadRepo.Update(ctx, upload)
+	// 		}
+	// 	}
+	// }()
+
 	defer file.Close()
 	defer func() {
 		if err := os.Remove(tmpPath); err != nil && !os.IsNotExist(err) {
@@ -246,34 +260,6 @@ func (s *UploadService) ListUploads(ctx context.Context, page, pageSize int) (*m
 	}
 
 	resp := models.NewPaginated(items, page, pageSize, total)
-	return &resp, nil
-}
-
-func (s *UploadService) Reparse(ctx context.Context, uploadID uint) (*models.UploadResponse, error) {
-	upload, err := s.uploadRepo.FindByID(ctx, uploadID)
-	if err != nil {
-		return nil, fmt.Errorf("uploadService.Reparse(%d): %w", uploadID, err)
-	}
-
-	if upload.Status == entities.UploadParsing || upload.Status == entities.UploadInserting {
-		return nil, fmt.Errorf("uploadService.Reparse(%d): %w", uploadID, constants.ErrUploadInProgress)
-	}
-
-	if err := s.flowRepo.DeleteByUploadID(ctx, uploadID); err != nil {
-		return nil, fmt.Errorf("uploadService.Reparse delete flows: %w", err)
-	}
-
-	upload.Status = entities.UploadQueued
-	upload.ProgressPct = 0
-	upload.PacketsProcessed = 0
-	upload.FlowCount = 0
-	upload.DurationMs = 0
-	upload.ErrorMsg = ""
-	if err := s.uploadRepo.Update(ctx, upload); err != nil {
-		return nil, fmt.Errorf("uploadService.Reparse reset: %w", err)
-	}
-
-	resp := toUploadResponse(upload)
 	return &resp, nil
 }
 

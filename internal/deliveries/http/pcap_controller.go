@@ -99,31 +99,6 @@ func (c *PcapController) ListUploads(ctx *gin.Context) {
 	WritePaginated(ctx, http.StatusOK, result.Data, result.Meta)
 }
 
-func (c *PcapController) Reparse(ctx *gin.Context) {
-	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
-	if err != nil {
-		BadRequest(ctx, "invalid upload id")
-		return
-	}
-
-	result, err := c.uploadService.Reparse(ctx.Request.Context(), uint(id))
-	if err != nil {
-		if errors.Is(err, constants.ErrUploadNotFound) {
-			NotFound(ctx, "upload not found")
-			return
-		}
-		if errors.Is(err, constants.ErrUploadInProgress) {
-			WriteError(ctx, http.StatusConflict, "upload is currently in progress")
-			return
-		}
-		c.log.Errorf("reparse failed: %v", err)
-		InternalError(ctx, "reparse failed")
-		return
-	}
-
-	WriteJSON(ctx, http.StatusAccepted, result)
-}
-
 func (c *PcapController) ListFlows(ctx *gin.Context) {
 	var filter models.FlowFilter
 	if err := ctx.ShouldBindQuery(&filter); err != nil {
