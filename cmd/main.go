@@ -6,11 +6,13 @@ import "github.com/Dokito555/mizuki/internal/configs"
 func main() {
 	viper := configs.NewViper()
 	log := configs.NewLogger(viper)
+	db := configs.NewDB(viper, log)
 	app := configs.NewGin()
 
 	// inject configs to app
 	configs.Bootstrap(&configs.BootstrapConfig{
 		App:         app,
+		DB:          db,
 		Log:         log,
 		Config:      viper,
 	})
