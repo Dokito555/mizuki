@@ -18,7 +18,7 @@ func NewViper() *viper.Viper {
 
 	err := config.ReadInConfig()
 	if err != nil {
-		fmt.Printf("No .env file found, relying on environment variables: %v\n", err)
+		fmt.Printf("[viper] .env file not found, falling back to environment variables: %v\n", err)
 	}
 
 	return config

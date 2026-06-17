@@ -39,7 +39,10 @@ func (s *FlowService) GetByID(ctx context.Context, id uint) (*models.FlowDetail,
 	}
 
 	samples, err := s.flowRepo.FindPacketSamplesByFlowID(ctx, id, 100)
-	if err == nil && len(samples) > 0 {
+	if err != nil {
+		s.log.Errorf("flowService.GetByID(%d) packet samples: %v", id, err)
+	}
+	if len(samples) > 0 {
 		detail.PacketSamples = make([]models.PacketSampleItem, len(samples))
 		for i, s := range samples {
 			detail.PacketSamples[i] = models.PacketSampleItem{
@@ -86,6 +89,8 @@ func toFlowResponse(f *entities.Flow) models.FlowResponse {
 		DNSQueries:  f.DNSQueries,
 		AppProtocol: f.AppProtocol,
 		IATAvgMs:    f.IATAvgMs,
+		IATMinMs:    f.IATMinMs,
+		IATMaxMs:    f.IATMaxMs,
 		IATStdDevMs: f.IATStdDevMs,
 		Score:       f.Score,
 		CreatedAt:   f.CreatedAt,

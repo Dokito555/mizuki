@@ -25,21 +25,22 @@ func Bootstrap(config *BootstrapConfig) {
 		maxFileSize = 500 * 1024 * 1024
 	}
 
-	pcapEngine := pcap.NewEngine(false, 100)
+	pcapEngine := pcap.NewEngine()
 
 	flowRepo := repositories.NewFlowRepository(config.DB)
 	uploadRepo := repositories.NewUploadRepository(config.DB)
 
 	flowService := services.NewFlowService(flowRepo, uploadRepo, config.Log)
-	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, flowService, config.Log, maxFileSize)
+	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, config.Log, maxFileSize)
 
 	healthController := http.NewHealthController(config.Log)
-	pcapController := http.NewPcapController(uploadService, flowService, config.Log)
+	pcapController := http.NewPcapController(uploadService, flowService, config.Log, maxFileSize)
 
 	routeConfig := route.RouteConfig{
 		App:              config.App,
 		HealthController: healthController,
 		PcapController:   pcapController,
+		Log:              config.Log,
 	}
 
 	routeConfig.Setup()

@@ -16,23 +16,33 @@ type PcapController struct {
 	uploadService *services.UploadService
 	flowService   *services.FlowService
 	log           *logrus.Logger
+	maxFileSize   int64
 }
 
 func NewPcapController(
 	uploadService *services.UploadService,
 	flowService *services.FlowService,
 	log *logrus.Logger,
+	maxFileSize int64,
 ) *PcapController {
 	return &PcapController{
 		uploadService: uploadService,
 		flowService:   flowService,
 		log:           log,
+		maxFileSize:   maxFileSize,
 	}
 }
 
 func (c *PcapController) Upload(ctx *gin.Context) {
+	ctx.Request.Body = http.MaxBytesReader(ctx.Writer, ctx.Request.Body, c.maxFileSize+1024)
+
 	file, header, err := ctx.Request.FormFile("file")
 	if err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			WriteError(ctx, http.StatusRequestEntityTooLarge, "file exceeds maximum size")
+			return
+		}
 		BadRequest(ctx, "file is required")
 		return
 	}
@@ -102,6 +112,10 @@ func (c *PcapController) Reparse(ctx *gin.Context) {
 			NotFound(ctx, "upload not found")
 			return
 		}
+		if errors.Is(err, constants.ErrUploadInProgress) {
+			WriteError(ctx, http.StatusConflict, "upload is currently in progress")
+			return
+		}
 		c.log.Errorf("reparse failed: %v", err)
 		InternalError(ctx, "reparse failed")
 		return
@@ -125,6 +139,20 @@ func (c *PcapController) ListFlows(ctx *gin.Context) {
 	}
 
 	WritePaginated(ctx, http.StatusOK, result.Data, result.Meta)
+}
+
+func (c *PcapController) CancelUpload(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		BadRequest(ctx, "invalid upload id")
+		return
+	}
+
+	if !c.uploadService.CancelUpload(uint(id)) {
+		NotFound(ctx, "upload not found or already completed")
+		return
+	}
+	WriteJSON(ctx, http.StatusOK, gin.H{"message": "upload cancelled"})
 }
 
 func (c *PcapController) GetFlow(ctx *gin.Context) {

@@ -2,6 +2,7 @@ package pcap
 
 import (
 	"fmt"
+	"math"
 	"time"
 )
 
@@ -94,23 +95,10 @@ func (fs *FlowStats) calculateIAT() (avgMs, minMs, maxMs, stdDevMs float64) {
 	avgMs = sum / n
 	variance := (sumSq / n) - (avgMs * avgMs)
 	if variance > 0 {
-		stdDevMs = sqrt(variance)
+		stdDevMs = math.Sqrt(variance)
 	}
 
 	return avgMs, minMs, maxMs, stdDevMs
 }
 
-func sqrt(x float64) float64 {
-	if x <= 0 {
-		return 0
-	}
-	z := x / 2
-	for i := 0; i < 100; i++ {
-		prev := z
-		z -= (z*z - x) / (2 * z)
-		if z-prev < 1e-12 && prev-z < 1e-12 {
-			break
-		}
-	}
-	return z
-}
+

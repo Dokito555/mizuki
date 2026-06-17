@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"os"
+	"sync"
 
 	"github.com/Dokito555/mizuki/internal/constants"
 	"github.com/Dokito555/mizuki/internal/entities"
@@ -19,16 +21,16 @@ type UploadService struct {
 	uploadRepo  repositories.UploadRepository
 	flowRepo    repositories.FlowRepository
 	pcapEngine  *pcap.Engine
-	flowSvc     *FlowService
 	log         *logrus.Logger
 	maxFileSize int64
+	mu           sync.Mutex
+	cancelFuncs  map[uint]context.CancelFunc
 }
 
 func NewUploadService(
 	uploadRepo repositories.UploadRepository,
 	flowRepo repositories.FlowRepository,
 	pcapEngine *pcap.Engine,
-	flowSvc *FlowService,
 	log *logrus.Logger,
 	maxFileSize int64,
 ) *UploadService {
@@ -36,9 +38,9 @@ func NewUploadService(
 		uploadRepo:  uploadRepo,
 		flowRepo:    flowRepo,
 		pcapEngine:  pcapEngine,
-		flowSvc:     flowSvc,
 		log:         log,
 		maxFileSize: maxFileSize,
+		cancelFuncs: make(map[uint]context.CancelFunc),
 	}
 }
 
@@ -47,18 +49,34 @@ func (s *UploadService) ProcessUpload(ctx context.Context, file multipart.File, 
 		return nil, fmt.Errorf("uploadService.ProcessUpload: %w", constants.ErrFileTooLarge)
 	}
 
-	fileHash, err := hashReader(file)
+	tempDir := os.Getenv("MIZUKI_TEMP_DIR")
+	tmpFile, err := os.CreateTemp(tempDir, "mizuki-*.pcap")
 	if err != nil {
-		return nil, fmt.Errorf("uploadService.ProcessUpload hash: %w", err)
+		return nil, fmt.Errorf("uploadService.ProcessUpload temp: %w", err)
 	}
 
-	if _, err := file.Seek(0, io.SeekStart); err != nil {
+	// copy + hash must happen here, before the multipart file is closed
+	hash := sha256.New()
+	written, err := io.Copy(tmpFile, io.TeeReader(file, hash))
+	if err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return nil, fmt.Errorf("uploadService.ProcessUpload copy: %w", err)
+	}
+
+	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
 		return nil, fmt.Errorf("uploadService.ProcessUpload seek: %w", err)
 	}
+
+	fileHash := fmt.Sprintf("%x", hash.Sum(nil))
 
 	if !forceReparse {
 		existing, err := s.uploadRepo.FindByHash(ctx, fileHash)
 		if err == nil && existing.Status == entities.UploadDone {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
 			resp := toUploadResponse(existing)
 			return &resp, nil
 		}
@@ -66,22 +84,56 @@ func (s *UploadService) ProcessUpload(ctx context.Context, file multipart.File, 
 
 	upload := &entities.Upload{
 		Filename: header.Filename,
-		FileSize: header.Size,
+		FileSize: written,
 		FileHash: fileHash,
 		Status:   entities.UploadQueued,
 	}
 
 	if err := s.uploadRepo.Create(ctx, upload); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
 		return nil, fmt.Errorf("uploadService.ProcessUpload create: %w", err)
 	}
 
-	go s.runPipeline(context.Background(), upload.ID, file, header.Filename)
+	s.mu.Lock()
+	pCtx, cancel := context.WithCancel(context.Background())
+	s.cancelFuncs[upload.ID] = cancel
+	s.mu.Unlock()
+
+	go s.runPipeline(pCtx, upload.ID, tmpFile)
 
 	resp := toUploadResponse(upload)
 	return &resp, nil
 }
 
-func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file multipart.File, filename string) {
+func (s *UploadService) CancelUpload(uploadID uint) bool {
+	s.mu.Lock()
+	cancel, ok := s.cancelFuncs[uploadID]
+	if ok {
+		delete(s.cancelFuncs, uploadID)
+	}
+	s.mu.Unlock()
+	if ok {
+		cancel()
+		return true
+	}
+	return false
+}
+
+func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os.File) {
+	tmpPath := file.Name()
+	defer file.Close()
+	defer func() {
+		if err := os.Remove(tmpPath); err != nil && !os.IsNotExist(err) {
+			s.log.WithField("upload_id", uploadID).Errorf("failed to remove temp file %s: %v", tmpPath, err)
+		}
+	}()
+	defer func() {
+		s.mu.Lock()
+		delete(s.cancelFuncs, uploadID)
+		s.mu.Unlock()
+	}()
+
 	log := s.log.WithField("upload_id", uploadID)
 
 	updateStatus := func(status entities.UploadStatus, pct int, packets int64) {
@@ -108,6 +160,7 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file mul
 
 	result, err := s.pcapEngine.Parse(ctx, file, pcap.ParseParams{
 		MergeBidirectional: false,
+		SamplePacketLen:    100,
 		SamplePayloadLen:   64,
 		OnProgress: func(packets int64, pct int) {
 			updateStatus(entities.UploadParsing, 0, packets)
@@ -202,6 +255,10 @@ func (s *UploadService) Reparse(ctx context.Context, uploadID uint) (*models.Upl
 		return nil, fmt.Errorf("uploadService.Reparse(%d): %w", uploadID, err)
 	}
 
+	if upload.Status == entities.UploadParsing || upload.Status == entities.UploadInserting {
+		return nil, fmt.Errorf("uploadService.Reparse(%d): %w", uploadID, constants.ErrUploadInProgress)
+	}
+
 	if err := s.flowRepo.DeleteByUploadID(ctx, uploadID); err != nil {
 		return nil, fmt.Errorf("uploadService.Reparse delete flows: %w", err)
 	}
@@ -218,14 +275,6 @@ func (s *UploadService) Reparse(ctx context.Context, uploadID uint) (*models.Upl
 
 	resp := toUploadResponse(upload)
 	return &resp, nil
-}
-
-func hashReader(r io.Reader) (string, error) {
-	h := sha256.New()
-	if _, err := io.Copy(h, r); err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
 }
 
 func toUploadResponse(u *entities.Upload) models.UploadResponse {

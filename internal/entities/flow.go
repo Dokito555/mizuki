@@ -36,7 +36,7 @@ type Flow struct {
 
 type FlowPacketSample struct {
 	ID        uint      `gorm:"primaryKey"`
-	FlowID    uint      `gorm:"not null;index"`
+	FlowID    uint      `gorm:"not null;index;constraint:OnDelete:CASCADE"`
 	Timestamp time.Time `gorm:"not null;index"`
 	Size      int       `gorm:"not null"`
 }

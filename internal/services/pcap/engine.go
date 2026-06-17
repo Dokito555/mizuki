@@ -14,8 +14,18 @@ type ProgressFunc func(packetsProcessed int64, pct int)
 
 type ParseParams struct {
 	MergeBidirectional bool
-	SamplePayloadLen   int
+	SamplePacketLen    int // number of timestamps to keep for IAT (default 100)
+	SamplePayloadLen   int // bytes of app payload to keep (default 64)
 	OnProgress         ProgressFunc
+}
+
+func (p *ParseParams) normalize() {
+	if p.SamplePacketLen <= 0 {
+		p.SamplePacketLen = 100
+	}
+	if p.SamplePayloadLen <= 0 {
+		p.SamplePayloadLen = 64
+	}
 }
 
 type ParseResult struct {
@@ -24,21 +34,16 @@ type ParseResult struct {
 	Duration     time.Duration
 }
 
-type Engine struct {
-	mergeBidi bool
-	sampleLen int
-}
+type Engine struct{}
 
-func NewEngine(mergeBidirectional bool, samplePacketLen int) *Engine {
-	return &Engine{
-		mergeBidi: mergeBidirectional,
-		sampleLen: samplePacketLen,
-	}
+func NewEngine() *Engine {
+	return &Engine{}
 }
 
 func (e *Engine) Parse(ctx context.Context, r io.Reader, params ParseParams) (*ParseResult, error) {
+	params.normalize()
 	start := time.Now()
-	builder := NewFlowBuilder(params.MergeBidirectional, e.sampleLen)
+	builder := NewFlowBuilder(params.MergeBidirectional, params.SamplePacketLen)
 
 	raw, ok := r.(io.ReadSeeker)
 	if !ok {

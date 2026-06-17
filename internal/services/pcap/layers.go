@@ -146,7 +146,7 @@ func parseClientHello(data []byte) (version, sni string) {
 }
 
 func extractSNI(data []byte) string {
-	if len(data) < 43 {
+	if len(data) < 44 {
 		return ""
 	}
 

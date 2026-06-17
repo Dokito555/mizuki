@@ -3,17 +3,30 @@ package models
 import "time"
 
 type FlowFilter struct {
-	SrcIP    string     `form:"src_ip"`
-	DstIP    string     `form:"dst_ip"`
-	Protocol string     `form:"protocol"`
-	MinScore float64    `form:"min_score"`
-	Since    *time.Time `form:"since"`
-	Until    *time.Time `form:"until"`
-	UploadID uint       `form:"upload_id"`
-	Page     int        `form:"page"`
-	PageSize int        `form:"page_size"`
-	SortBy   string     `form:"sort_by"`
-	SortDesc bool       `form:"sort_desc"`
+	SrcIP      string  `form:"src_ip"`
+	DstIP      string  `form:"dst_ip"`
+	Protocol   string  `form:"protocol"`
+	MinScore   float64 `form:"min_score"`
+	SinceStr   string  `form:"since"`
+	UntilStr   string  `form:"until"`
+	Since      *time.Time
+	Until      *time.Time
+	UploadID   uint   `form:"upload_id"`
+	Page       int    `form:"page"`
+	PageSize   int    `form:"page_size"`
+	SortBy     string `form:"sort_by"`
+	SortDesc   bool   `form:"sort_desc"`
+}
+
+var allowedSortFields = map[string]bool{
+	"first_seen":  true,
+	"last_seen":   true,
+	"packet_count": true,
+	"byte_count":  true,
+	"score":       true,
+	"src_ip":      true,
+	"dst_ip":      true,
+	"protocol":    true,
 }
 
 const (
@@ -31,9 +44,25 @@ func (f *FlowFilter) Normalize() {
 	if f.PageSize > MaxPageSize {
 		f.PageSize = MaxPageSize
 	}
-	if f.SortBy == "" {
+	if f.SortBy == "" || !allowedSortFields[f.SortBy] {
 		f.SortBy = "first_seen"
 		f.SortDesc = true
+	}
+
+	if f.SinceStr != "" {
+		if t, err := time.Parse(time.RFC3339, f.SinceStr); err == nil {
+			f.Since = &t
+		}
+	}
+	if f.UntilStr != "" {
+		if t, err := time.Parse(time.RFC3339, f.UntilStr); err == nil {
+			f.Until = &t
+		}
+	}
+	if f.Since == nil {
+		now := time.Now()
+		since := now.Add(-24 * time.Hour)
+		f.Since = &since
 	}
 }
 
@@ -55,6 +84,8 @@ type FlowResponse struct {
 	DNSQueries  []string  `json:"dns_queries,omitempty"`
 	AppProtocol string    `json:"app_protocol,omitempty"`
 	IATAvgMs    float64   `json:"iat_avg_ms"`
+	IATMinMs    float64   `json:"iat_min_ms"`
+	IATMaxMs    float64   `json:"iat_max_ms"`
 	IATStdDevMs float64   `json:"iat_std_dev_ms"`
 	Score       float64   `json:"score"`
 	CreatedAt   time.Time `json:"created_at"`

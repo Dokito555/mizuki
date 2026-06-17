@@ -3,6 +3,7 @@ package http
 import (
 	"net/http"
 
+	"github.com/Dokito555/mizuki/internal/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,7 +11,7 @@ func WriteJSON(c *gin.Context, status int, data interface{}) {
 	c.JSON(status, gin.H{"data": data})
 }
 
-func WritePaginated(c *gin.Context, status int, data interface{}, meta interface{}) {
+func WritePaginated(c *gin.Context, status int, data interface{}, meta models.Meta) {
 	c.JSON(status, gin.H{
 		"data": data,
 		"meta": meta,
@@ -18,10 +19,6 @@ func WritePaginated(c *gin.Context, status int, data interface{}, meta interface
 }
 
 func WriteError(c *gin.Context, status int, message string) {
-	c.JSON(status, gin.H{"error": message})
-}
-
-func WriteErrorWithCode(c *gin.Context, status int, message string) {
 	c.JSON(status, gin.H{"error": message})
 }
 

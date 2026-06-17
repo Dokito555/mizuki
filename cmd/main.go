@@ -18,9 +18,8 @@ func main() {
 	})
 
 	port := viper.GetString("APP_PORT")
-	err := app.Run(":" + port)
-	log.Info("Listening to port: " + port)
-	if err != nil {
+	log.Info("Listening on port: " + port)
+	if err := app.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
