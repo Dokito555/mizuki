@@ -93,6 +93,7 @@ func toFlowResponse(f *entities.Flow) models.FlowResponse {
 		IATMaxMs:    f.IATMaxMs,
 		IATStdDevMs: f.IATStdDevMs,
 		Score:       f.Score,
+		Threats:     f.Threats,
 		CreatedAt:   f.CreatedAt,
 	}
 }

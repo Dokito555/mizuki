@@ -5,6 +5,7 @@ import (
 	"github.com/Dokito555/mizuki/internal/deliveries/http/route"
 	"github.com/Dokito555/mizuki/internal/repositories"
 	"github.com/Dokito555/mizuki/internal/services"
+	"github.com/Dokito555/mizuki/internal/services/detection"
 	"github.com/Dokito555/mizuki/internal/services/pcap"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -31,7 +32,8 @@ func Bootstrap(config *BootstrapConfig) {
 	uploadRepo := repositories.NewUploadRepository(config.DB)
 
 	flowService := services.NewFlowService(flowRepo, uploadRepo, config.Log)
-	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, config.Log, maxFileSize)
+	detectionEngine := detection.NewDetectionEngine(flowRepo, config.Log)
+	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, detectionEngine, config.Log, maxFileSize)
 
 	healthController := http.NewHealthController(config.Log)
 	pcapController := http.NewPcapController(uploadService, flowService, config.Log, maxFileSize)

@@ -31,6 +31,7 @@ func (c *RouteConfig) Setup() {
 		{
 			uploads.GET("", c.PcapController.ListUploads)
 			uploads.GET("/:id", c.PcapController.GetUpload)
+			uploads.POST("/:id/analyze", c.PcapController.AnalyzeUpload)
 			uploads.POST("/:id/cancel", c.PcapController.CancelUpload)
 		}
 

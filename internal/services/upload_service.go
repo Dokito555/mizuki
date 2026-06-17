@@ -13,34 +13,38 @@ import (
 	"github.com/Dokito555/mizuki/internal/entities"
 	"github.com/Dokito555/mizuki/internal/models"
 	"github.com/Dokito555/mizuki/internal/repositories"
+	"github.com/Dokito555/mizuki/internal/services/detection"
 	"github.com/Dokito555/mizuki/internal/services/pcap"
 	"github.com/sirupsen/logrus"
 )
 
 type UploadService struct {
-	uploadRepo  repositories.UploadRepository
-	flowRepo    repositories.FlowRepository
-	pcapEngine  *pcap.Engine
-	log         *logrus.Logger
-	maxFileSize int64
-	mu           sync.Mutex
-	cancelFuncs  map[uint]context.CancelFunc
+	uploadRepo      repositories.UploadRepository
+	flowRepo        repositories.FlowRepository
+	pcapEngine      *pcap.Engine
+	detectionEngine *detection.DetectionEngine
+	log             *logrus.Logger
+	maxFileSize     int64
+	mu              sync.Mutex
+	cancelFuncs     map[uint]context.CancelFunc
 }
 
 func NewUploadService(
 	uploadRepo repositories.UploadRepository,
 	flowRepo repositories.FlowRepository,
 	pcapEngine *pcap.Engine,
+	detectionEngine *detection.DetectionEngine,
 	log *logrus.Logger,
 	maxFileSize int64,
 ) *UploadService {
 	return &UploadService{
-		uploadRepo:  uploadRepo,
-		flowRepo:    flowRepo,
-		pcapEngine:  pcapEngine,
-		log:         log,
-		maxFileSize: maxFileSize,
-		cancelFuncs: make(map[uint]context.CancelFunc),
+		uploadRepo:      uploadRepo,
+		flowRepo:        flowRepo,
+		pcapEngine:      pcapEngine,
+		detectionEngine: detectionEngine,
+		log:             log,
+		maxFileSize:     maxFileSize,
+		cancelFuncs:     make(map[uint]context.CancelFunc),
 	}
 }
 
@@ -237,6 +241,16 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os
 		"packets": result.TotalPackets,
 		"elapsed": result.Duration.String(),
 	}).Info("upload processing complete")
+
+	go func() {
+		if err := s.detectionEngine.AnalyzeUpload(context.Background(), uploadID); err != nil {
+			log.Errorf("detection analysis failed: %v", err)
+		}
+	}()
+}
+
+func (s *UploadService) AnalyzeUpload(ctx context.Context, uploadID uint) error {
+	return s.detectionEngine.AnalyzeUpload(ctx, uploadID)
 }
 
 func (s *UploadService) GetUploadByID(ctx context.Context, id uint) (*models.UploadResponse, error) {

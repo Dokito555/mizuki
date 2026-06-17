@@ -17,6 +17,7 @@ type FlowRepository interface {
 	FindByID(ctx context.Context, id uint) (*entities.Flow, error)
 	FindAll(ctx context.Context, filter models.FlowFilter) ([]entities.Flow, int64, error)
 	FindPacketSamplesByFlowID(ctx context.Context, flowID uint, limit int) ([]entities.FlowPacketSample, error)
+	UpdateScores(ctx context.Context, flows []entities.Flow) error
 	DeleteByUploadID(ctx context.Context, uploadID uint) error
 	CountByUploadID(ctx context.Context, uploadID uint) (int64, error)
 }
@@ -120,6 +121,28 @@ func (r *flowRepository) FindPacketSamplesByFlowID(ctx context.Context, flowID u
 		return nil, fmt.Errorf("flowRepo.FindPacketSamplesByFlowID: %w", err)
 	}
 	return samples, nil
+}
+
+func (r *flowRepository) UpdateScores(ctx context.Context, flows []entities.Flow) error {
+	if len(flows) == 0 {
+		return nil
+	}
+	tx := r.db.WithContext(ctx).Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	for i := range flows {
+		if err := tx.Model(&flows[i]).Updates(map[string]interface{}{
+			"score":   flows[i].Score,
+			"threats": flows[i].Threats,
+		}).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("flowRepo.UpdateScores(%d): %w", flows[i].ID, err)
+		}
+	}
+	return tx.Commit().Error
 }
 
 func (r *flowRepository) DeleteByUploadID(ctx context.Context, uploadID uint) error {

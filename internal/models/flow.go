@@ -59,7 +59,7 @@ func (f *FlowFilter) Normalize() {
 			f.Until = &t
 		}
 	}
-	if f.Since == nil {
+	if f.Since == nil && f.UploadID == 0 {
 		now := time.Now()
 		since := now.Add(-24 * time.Hour)
 		f.Since = &since
@@ -88,6 +88,7 @@ type FlowResponse struct {
 	IATMaxMs    float64   `json:"iat_max_ms"`
 	IATStdDevMs float64   `json:"iat_std_dev_ms"`
 	Score       float64   `json:"score"`
+	Threats     []string  `json:"threats,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 

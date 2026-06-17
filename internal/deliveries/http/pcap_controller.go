@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -114,6 +115,18 @@ func (c *PcapController) ListFlows(ctx *gin.Context) {
 	}
 
 	WritePaginated(ctx, http.StatusOK, result.Data, result.Meta)
+}
+
+func (c *PcapController) AnalyzeUpload(ctx *gin.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
+	if err != nil {
+		BadRequest(ctx, "invalid upload id")
+		return
+	}
+
+	go c.uploadService.AnalyzeUpload(context.Background(), uint(id))
+
+	WriteJSON(ctx, http.StatusAccepted, gin.H{"message": "analysis started"})
 }
 
 func (c *PcapController) CancelUpload(ctx *gin.Context) {

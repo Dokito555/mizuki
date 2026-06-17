@@ -28,8 +28,9 @@ type Flow struct {
 	IATMaxMs    float64
 	IATStdDevMs float64
 
-	Score     float64 `gorm:"default:0;index"`
-	RawFileID uint    `gorm:"index"`
+	Score     float64  `gorm:"default:0;index"`
+	Threats   []string `gorm:"type:text[]"`
+	RawFileID uint     `gorm:"index"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
