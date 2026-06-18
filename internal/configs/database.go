@@ -23,13 +23,13 @@ func NewDB(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 		viper.GetString("DB_SSLMODE"),
 	)
 
-	gormLogLevel := logger.Silent
+	gormLogLevel := logger.Warn
 	if viper.GetString("APP_ENV") == "development" {
 		gormLogLevel = logger.Info
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-		Logger: logger.Default.LogMode(gormLogLevel),
+		Logger: NewGormLogger(log, gormLogLevel),
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
@@ -63,4 +63,3 @@ func NewDB(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 	log.Info("database connected and migrated")
 	return db
 }
-
