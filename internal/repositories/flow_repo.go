@@ -134,10 +134,8 @@ func (r *flowRepository) UpdateScores(ctx context.Context, flows []entities.Flow
 		}
 	}()
 	for i := range flows {
-		if err := tx.Model(&flows[i]).Updates(map[string]interface{}{
-			"score":   flows[i].Score,
-			"threats": flows[i].Threats,
-		}).Error; err != nil {
+		if err := tx.Model(&flows[i]).Select("score", "threats").Updates(&flows[i]).Error;
+		err != nil {
 			tx.Rollback()
 			return fmt.Errorf("flowRepo.UpdateScores(%d): %w", flows[i].ID, err)
 		}

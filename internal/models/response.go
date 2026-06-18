@@ -7,8 +7,8 @@ type ApiResponse struct {
 }
 
 type PaginatedResponse struct {
-	Data       interface{} `json:"data"`
-	Meta       Meta        `json:"meta"`
+	Data interface{} `json:"data"`
+	Meta Meta        `json:"meta"`
 }
 
 type Meta struct {
@@ -19,6 +19,13 @@ type Meta struct {
 }
 
 func NewMeta(page, pageSize int, total int64) Meta {
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 {
+		pageSize = DefaultPageSize
+	}
+
 	totalPages := int(total / int64(pageSize))
 	if total%int64(pageSize) > 0 {
 		totalPages++

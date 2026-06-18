@@ -19,7 +19,7 @@ func (d *PayloadDownloadDetector) Name() string {
 func (d *PayloadDownloadDetector) PreProcess(ctx context.Context, allFlows []entities.Flow) {}
 
 func (d *PayloadDownloadDetector) DetectFlow(ctx context.Context, flow *entities.Flow) (float64, string) {
-	if flow.ByteCount < 500_000 {
+	if flow.PacketCount <= 0 || flow.ByteCount < 500_000 {
 		return 0, ""
 	}
 

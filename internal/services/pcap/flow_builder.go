@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/Dokito555/mizuki/internal/entities"
+	"github.com/lib/pq"
 )
 
 type FlowBuilder struct {
-	mu          sync.Mutex
-	flows       map[string]*FlowStats
-	mergeBidi   bool
-	sampleLen   int
+	mu        sync.Mutex
+	flows     map[string]*FlowStats
+	mergeBidi bool
+	sampleLen int
 }
 
 func NewFlowBuilder(mergeBidirectional bool, samplePacketLen int) *FlowBuilder {
@@ -23,20 +24,20 @@ func NewFlowBuilder(mergeBidirectional bool, samplePacketLen int) *FlowBuilder {
 }
 
 type PacketInfo struct {
-	SrcIP     string
-	DstIP     string
-	SrcPort   int
-	DstPort   int
-	Protocol  string
-	Length    int64
-	Timestamp time.Time
-	Payload   []byte
-	SrcMAC    string
-	DstMAC    string
+	SrcIP      string
+	DstIP      string
+	SrcPort    int
+	DstPort    int
+	Protocol   string
+	Length     int64
+	Timestamp  time.Time
+	Payload    []byte
+	SrcMAC     string
+	DstMAC     string
 	TLSVersion string
-	SNI       string
-	DNSQuery  string
-	AppProto  string
+	SNI        string
+	DNSQuery   string
+	AppProto   string
 }
 
 func (fb *FlowBuilder) AddPacket(p *PacketInfo) {
@@ -113,27 +114,27 @@ func ToFlowEntity(stats *FlowStats, rawFileID uint, payloadSample []byte) *entit
 	iatAvg, iatMin, iatMax, iatStd := stats.calculateIAT()
 
 	return &entities.Flow{
-		SrcIP:      stats.Key.SrcIP,
-		DstIP:      stats.Key.DstIP,
-		SrcPort:    stats.Key.SrcPort,
-		DstPort:    stats.Key.DstPort,
-		Protocol:   stats.Key.Protocol,
-		FirstSeen:  stats.FirstSeen,
-		LastSeen:   stats.LastSeen,
-		PacketCount: stats.PacketCount,
-		ByteCount:  stats.ByteCount,
-		SrcMAC:     stats.SrcMAC,
-		DstMAC:     stats.DstMAC,
-		TLSVersion: stats.TLSVersion,
-		TLSSNI:     stats.TLSSNI,
-		DNSQueries: stats.DNSQueries,
-		AppProtocol: stats.AppProtocol,
+		SrcIP:         stats.Key.SrcIP,
+		DstIP:         stats.Key.DstIP,
+		SrcPort:       stats.Key.SrcPort,
+		DstPort:       stats.Key.DstPort,
+		Protocol:      stats.Key.Protocol,
+		FirstSeen:     stats.FirstSeen,
+		LastSeen:      stats.LastSeen,
+		PacketCount:   stats.PacketCount,
+		ByteCount:     stats.ByteCount,
+		SrcMAC:        stats.SrcMAC,
+		DstMAC:        stats.DstMAC,
+		TLSVersion:    stats.TLSVersion,
+		TLSSNI:        stats.TLSSNI,
+		DNSQueries:    pq.StringArray(stats.DNSQueries),
+		AppProtocol:   stats.AppProtocol,
 		PayloadSample: payloadSample,
-		IATAvgMs:    iatAvg,
-		IATMinMs:    iatMin,
-		IATMaxMs:    iatMax,
-		IATStdDevMs: iatStd,
-		RawFileID:   rawFileID,
+		IATAvgMs:      iatAvg,
+		IATMinMs:      iatMin,
+		IATMaxMs:      iatMax,
+		IATStdDevMs:   iatStd,
+		RawFileID:     rawFileID,
 	}
 }
 

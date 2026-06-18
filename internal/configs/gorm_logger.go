@@ -10,7 +10,6 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-
 type GormLogger struct {
 	log                  *logrus.Logger
 	level                logger.LogLevel
@@ -71,7 +70,5 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 		entry.WithError(err).Error("database query failed")
 	case elapsed > l.slowThreshold && l.level >= logger.Warn:
 		entry.WithField("slow_threshold", l.slowThreshold.String()).Warn("slow database query")
-	case l.level >= logger.Info:
-		entry.Debug("database query")
 	}
 }

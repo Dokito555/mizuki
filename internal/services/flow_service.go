@@ -86,14 +86,14 @@ func toFlowResponse(f *entities.Flow) models.FlowResponse {
 		DstMAC:      f.DstMAC,
 		TLSVersion:  f.TLSVersion,
 		TLSSNI:      f.TLSSNI,
-		DNSQueries:  f.DNSQueries,
+		DNSQueries:  []string(f.DNSQueries),
 		AppProtocol: f.AppProtocol,
 		IATAvgMs:    f.IATAvgMs,
 		IATMinMs:    f.IATMinMs,
 		IATMaxMs:    f.IATMaxMs,
 		IATStdDevMs: f.IATStdDevMs,
 		Score:       f.Score,
-		Threats:     f.Threats,
+		Threats:     []string(f.Threats),
 		CreatedAt:   f.CreatedAt,
 	}
 }

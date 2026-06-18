@@ -8,6 +8,7 @@ import (
 	"github.com/Dokito555/mizuki/internal/models"
 	"github.com/Dokito555/mizuki/internal/repositories"
 	"github.com/Dokito555/mizuki/internal/services/detection/detectors"
+	"github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -103,5 +104,5 @@ func (e *DetectionEngine) analyzeFlow(ctx context.Context, flow *entities.Flow) 
 	}
 
 	flow.Score = e.scoring.FinalScore(results)
-	flow.Threats = e.scoring.CollectThreats(results)
+	flow.Threats = pq.StringArray(e.scoring.CollectThreats(results))
 }

@@ -140,8 +140,10 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os
 	// 	}
 	// }()
 
-	defer file.Close()
 	defer func() {
+		if err := file.Close(); err != nil {
+			s.log.WithField("upload_id", uploadID).Errorf("failed to close temp file %s: %v", tmpPath, err)
+		}
 		if err := os.Remove(tmpPath); err != nil && !os.IsNotExist(err) {
 			s.log.WithField("upload_id", uploadID).Errorf("failed to remove temp file %s: %v", tmpPath, err)
 		}
