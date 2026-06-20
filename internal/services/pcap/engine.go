@@ -10,7 +10,7 @@ import (
 	"github.com/google/gopacket/pcapgo"
 )
 
-type ProgressFunc func(packetsProcessed int64, pct int)
+type ProgressFunc func(packetsProcessed int64)
 
 type ParseParams struct {
 	MergeBidirectional bool
@@ -122,7 +122,7 @@ func (e *Engine) Parse(ctx context.Context, r io.Reader, params ParseParams) (*P
 		})
 
 		if totalPackets%1000 == 0 && params.OnProgress != nil {
-			params.OnProgress(totalPackets, 0)
+			params.OnProgress(totalPackets)
 		}
 	}
 

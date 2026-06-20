@@ -33,7 +33,7 @@ func Bootstrap(config *BootstrapConfig) {
 
 	flowService := services.NewFlowService(flowRepo, uploadRepo, config.Log)
 	detectionEngine := detection.NewDetectionEngine(flowRepo, config.Log)
-	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, detectionEngine, config.Log, maxFileSize)
+	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, detectionEngine, config.Config, config.Log, maxFileSize)
 
 	healthController := http.NewHealthController(config.Log)
 	pcapController := http.NewPcapController(uploadService, flowService, config.Log, maxFileSize)

@@ -16,6 +16,7 @@ import (
 	"github.com/Dokito555/mizuki/internal/services/detection"
 	"github.com/Dokito555/mizuki/internal/services/pcap"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 type UploadService struct {
@@ -24,6 +25,7 @@ type UploadService struct {
 	pcapEngine      *pcap.Engine
 	detectionEngine *detection.DetectionEngine
 	log             *logrus.Logger
+	config          *viper.Viper
 	maxFileSize     int64
 	mu              sync.Mutex
 	cancelFuncs     map[uint]context.CancelFunc
@@ -34,6 +36,7 @@ func NewUploadService(
 	flowRepo repositories.FlowRepository,
 	pcapEngine *pcap.Engine,
 	detectionEngine *detection.DetectionEngine,
+	config *viper.Viper,
 	log *logrus.Logger,
 	maxFileSize int64,
 ) *UploadService {
@@ -42,6 +45,7 @@ func NewUploadService(
 		flowRepo:        flowRepo,
 		pcapEngine:      pcapEngine,
 		detectionEngine: detectionEngine,
+		config:          config,
 		log:             log,
 		maxFileSize:     maxFileSize,
 		cancelFuncs:     make(map[uint]context.CancelFunc),
@@ -127,18 +131,18 @@ func (s *UploadService) CancelUpload(uploadID uint) bool {
 func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os.File) {
 	tmpPath := file.Name()
 
-	// defer func() {
-	// 	if r := recover(); r != nil {
-	// 		s.log.WithField("upload_id", uploadID).Errorf("pipeline panic: %v", r)
-	// 		upload, err := s.uploadRepo.FindByID(ctx, uploadID)
-	// 		if err == nil {
-	// 			upload.Status = entities.UploadError
-	// 			upload.ErrorMsg = fmt.Sprintf("panic: %v", r)
-	// 			upload.ProgressPct = 100
-	// 			s.uploadRepo.Update(ctx, upload)
-	// 		}
-	// 	}
-	// }()
+	defer func() {
+		if r := recover(); r != nil {
+			s.log.WithField("upload_id", uploadID).Errorf("pipeline panic: %v", r)
+			upload, err := s.uploadRepo.FindByID(ctx, uploadID)
+			if err == nil {
+				upload.Status = entities.UploadError
+				upload.ErrorMsg = fmt.Sprintf("panic: %v", r)
+				upload.ProgressPct = 100
+				s.uploadRepo.Update(ctx, upload)
+			}
+		}
+	}()
 
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -178,11 +182,17 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os
 
 	updateStatus(entities.UploadParsing, 0, 0)
 
+	mergeBidi := s.config.GetBool("PCAP_MERGE_BIDIRECTIONAL")
+	sampleLen := s.config.GetInt("PCAP_SAMPLE_LEN")
+	if sampleLen <= 0 {
+		sampleLen = 100
+	}
+
 	result, err := s.pcapEngine.Parse(ctx, file, pcap.ParseParams{
-		MergeBidirectional: false,
-		SamplePacketLen:    100,
+		MergeBidirectional: mergeBidi,
+		SamplePacketLen:    sampleLen,
 		SamplePayloadLen:   64,
-		OnProgress: func(packets int64, pct int) {
+		OnProgress: func(packets int64) {
 			updateStatus(entities.UploadParsing, 0, packets)
 		},
 	})
@@ -204,16 +214,18 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os
 		return
 	}
 
+	flowStatsMap := make(map[string]*pcap.FlowStats, len(result.FlowStats))
+	for _, stats := range result.FlowStats {
+		flowStatsMap[stats.Key.String()] = stats
+	}
+
 	var allSamples []entities.FlowPacketSample
 	for _, flow := range flows {
-		for _, stats := range result.FlowStats {
-			if stats.Key.String() == fmt.Sprintf("%s:%d-%s:%d-%s",
-				flow.SrcIP, flow.SrcPort, flow.DstIP, flow.DstPort, flow.Protocol) {
-				samples := pcap.ToPacketSampleEntities(flow.ID, stats)
-				if samples != nil {
-					allSamples = append(allSamples, samples...)
-				}
-				break
+		key := fmt.Sprintf("%s:%d-%s:%d-%s", flow.SrcIP, flow.SrcPort, flow.DstIP, flow.DstPort, flow.Protocol)
+		if stats, ok := flowStatsMap[key]; ok {
+			samples := pcap.ToPacketSampleEntities(flow.ID, stats)
+			if samples != nil {
+				allSamples = append(allSamples, samples...)
 			}
 		}
 	}
