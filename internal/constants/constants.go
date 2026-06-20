@@ -7,3 +7,10 @@ var (
 	ErrFlowNotFound   = errors.New("flow not found")
 	ErrFileTooLarge   = errors.New("file exceeds maximum size")
 )
+
+const (
+	BatchPending  = "pending"
+	BatchRunning  = "running"
+	BatchDone     = "done"
+	BatchError    = "error"
+)

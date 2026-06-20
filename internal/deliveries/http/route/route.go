@@ -11,6 +11,7 @@ type RouteConfig struct {
 	App              *gin.Engine
 	HealthController *http.HealthController
 	PcapController   *http.PcapController
+	AIController     *http.AIController
 	Log              *logrus.Logger
 }
 
@@ -32,13 +33,15 @@ func (c *RouteConfig) Setup() {
 			uploads.GET("", c.PcapController.ListUploads)
 			uploads.GET("/:id", c.PcapController.GetUpload)
 			uploads.POST("/:id/analyze", c.PcapController.AnalyzeUpload)
-			// uploads.POST("/:id/cancel", c.PcapController.CancelUpload)
+			uploads.POST("/:id/ai-analyze", c.AIController.AnalyzeUploadBatch)
 		}
 
 		flows := api.Group("/flows")
 		{
 			flows.GET("", c.PcapController.ListFlows)
 			flows.GET("/:id", c.PcapController.GetFlow)
+			flows.GET("/:id/ai", c.AIController.GetAIAnalysis)
+			flows.POST("/:id/ai-analyze", c.AIController.AnalyzeFlow)
 		}
 	}
 }

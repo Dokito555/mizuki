@@ -8,21 +8,22 @@ import (
 
 	"github.com/Dokito555/mizuki/internal/constants"
 	"github.com/Dokito555/mizuki/internal/models"
-	"github.com/Dokito555/mizuki/internal/services"
+	"github.com/Dokito555/mizuki/internal/services/flow"
+	"github.com/Dokito555/mizuki/internal/services/upload"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
 type PcapController struct {
-	uploadService *services.UploadService
-	flowService   *services.FlowService
+	uploadService *upload.UploadService
+	flowService   *flow.FlowService
 	log           *logrus.Logger
 	maxFileSize   int64
 }
 
 func NewPcapController(
-	uploadService *services.UploadService,
-	flowService *services.FlowService,
+	uploadService *upload.UploadService,
+	flowService *flow.FlowService,
 	log *logrus.Logger,
 	maxFileSize int64,
 ) *PcapController {

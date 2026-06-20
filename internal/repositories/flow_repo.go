@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/Dokito555/mizuki/internal/constants"
 	"github.com/Dokito555/mizuki/internal/entities"
@@ -18,6 +19,7 @@ type FlowRepository interface {
 	FindAll(ctx context.Context, filter models.FlowFilter) ([]entities.Flow, int64, error)
 	FindPacketSamplesByFlowID(ctx context.Context, flowID uint, limit int) ([]entities.FlowPacketSample, error)
 	UpdateScores(ctx context.Context, flows []entities.Flow) error
+	MarkAIAnalyzed(ctx context.Context, flowID uint, modelName string) error
 	DeleteByUploadID(ctx context.Context, uploadID uint) error
 	CountByUploadID(ctx context.Context, uploadID uint) (int64, error)
 }
@@ -141,6 +143,13 @@ func (r *flowRepository) UpdateScores(ctx context.Context, flows []entities.Flow
 		}
 	}
 	return tx.Commit().Error
+}
+
+func (r *flowRepository) MarkAIAnalyzed(ctx context.Context, flowID uint, modelName string) error {
+	return r.db.WithContext(ctx).Model(&entities.Flow{}).Where("id = ?", flowID).Updates(map[string]interface{}{
+		"ai_model":       modelName,
+		"ai_analyzed_at": time.Now(),
+	}).Error
 }
 
 func (r *flowRepository) DeleteByUploadID(ctx context.Context, uploadID uint) error {

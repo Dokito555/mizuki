@@ -4,9 +4,11 @@ import (
 	"github.com/Dokito555/mizuki/internal/deliveries/http"
 	"github.com/Dokito555/mizuki/internal/deliveries/http/route"
 	"github.com/Dokito555/mizuki/internal/repositories"
-	"github.com/Dokito555/mizuki/internal/services"
+	"github.com/Dokito555/mizuki/internal/services/ai"
 	"github.com/Dokito555/mizuki/internal/services/detection"
+	"github.com/Dokito555/mizuki/internal/services/flow"
 	"github.com/Dokito555/mizuki/internal/services/pcap"
+	"github.com/Dokito555/mizuki/internal/services/upload"
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -29,19 +31,25 @@ func Bootstrap(config *BootstrapConfig) {
 	pcapEngine := pcap.NewEngine()
 
 	flowRepo := repositories.NewFlowRepository(config.DB)
+	flowAIRepo := repositories.NewFlowAIRepository(config.DB)
 	uploadRepo := repositories.NewUploadRepository(config.DB)
+	batchRepo := repositories.NewUploadAIBatchRepository(config.DB)
 
-	flowService := services.NewFlowService(flowRepo, uploadRepo, config.Log)
-	detectionEngine := detection.NewDetectionEngine(flowRepo, config.Log)
-	uploadService := services.NewUploadService(uploadRepo, flowRepo, pcapEngine, detectionEngine, config.Config, config.Log, maxFileSize)
+	aiEngine := ai.NewAIEngine(flowRepo, flowAIRepo, uploadRepo, config.Config, config.Log)
+
+	flowService := flow.NewFlowService(flowRepo, uploadRepo, config.Log)
+	detectionEngine := detection.NewDetectionEngine(flowRepo, aiEngine, config.Log)
+	uploadService := upload.NewUploadService(uploadRepo, flowRepo, pcapEngine, detectionEngine, config.Config, config.Log, maxFileSize)
 
 	healthController := http.NewHealthController(config.Log)
 	pcapController := http.NewPcapController(uploadService, flowService, config.Log, maxFileSize)
+	aiController := http.NewAIController(aiEngine, flowService, flowRepo, flowAIRepo, batchRepo, config.Log)
 
 	routeConfig := route.RouteConfig{
 		App:              config.App,
 		HealthController: healthController,
 		PcapController:   pcapController,
+		AIController:     aiController,
 		Log:              config.Log,
 	}
 

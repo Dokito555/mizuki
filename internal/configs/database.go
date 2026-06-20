@@ -51,6 +51,8 @@ func NewDB(viper *viper.Viper, log *logrus.Logger) *gorm.DB {
 		&entities.Upload{},
 		&entities.Flow{},
 		&entities.FlowPacketSample{},
+		&entities.FlowAI{},
+		&entities.UploadAIBatch{},
 	); err != nil {
 		log.Fatalf("failed to auto migrate: %v", err)
 	}

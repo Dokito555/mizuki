@@ -1,2 +1,8 @@
 .env
-./assets
+*.env
+temp/
+*.exe
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

@@ -33,6 +33,10 @@ type Flow struct {
 	Score     float64        `gorm:"default:0;index"`
 	Threats   pq.StringArray `gorm:"type:text[]"`
 	RawFileID uint           `gorm:"index"`
+
+	AIAnalyzedAt *time.Time `json:"ai_analyzed_at,omitempty"`
+	AIModel     string     `json:"ai_model,omitempty"`
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
