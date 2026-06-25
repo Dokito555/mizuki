@@ -9,10 +9,11 @@ export function useUploads(page: () => number) {
 	}));
 }
 
-export function useUpload(id: () => number) {
+export function useUpload(id: () => number, opts?: { enabled?: boolean }) {
 	return createQuery(() => ({
 		queryKey: ['upload', id()],
 		queryFn: () => getUpload(id()),
+		enabled: opts?.enabled,
 		refetchInterval: (q) => {
 			const status = q.state.data?.status;
 			if (status === 'queued' || status === 'parsing' || status === 'inserting') {

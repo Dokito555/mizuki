@@ -1,8 +1,9 @@
 <script lang="ts">
-	import '../app.css';
-	import { browser } from '$app/environment';
-	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
-	import { Sidebar, Shield, ShieldHalf, Upload, GitBranch } from 'lucide-svelte';
+import '../app.css';
+import { browser } from '$app/environment';
+import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
+import { Toast } from '$lib/components/ui';
+import { Sidebar, Shield, ShieldHalf, Upload, GitBranch } from 'lucide-svelte';
 
 	let { children }: { children: import('svelte').Snippet } = $props();
 
@@ -37,6 +38,7 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
+	<Toast />
 	<div class="flex h-screen overflow-hidden bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors">
 		<aside
 			class="flex flex-col border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 transition-all duration-200 {sidebarOpen ? 'w-56' : 'w-0 overflow-hidden'}"

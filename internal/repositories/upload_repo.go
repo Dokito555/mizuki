@@ -16,6 +16,7 @@ type UploadRepository interface {
 	Update(ctx context.Context, upload *entities.Upload) error
 	UpdateProgress(ctx context.Context, id uint, status entities.UploadStatus, pct int, packetsProcessed int64) error
 	List(ctx context.Context, page, pageSize int) ([]entities.Upload, int64, error)
+	Count(ctx context.Context) (int64, error)
 }
 
 type uploadRepository struct {
@@ -70,6 +71,14 @@ func (r *uploadRepository) UpdateProgress(ctx context.Context, id uint, status e
 		return fmt.Errorf("uploadRepo.UpdateProgress(%d): %w", id, result.Error)
 	}
 	return nil
+}
+
+func (r *uploadRepository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&entities.Upload{}).Count(&total).Error; err != nil {
+		return 0, fmt.Errorf("uploadRepo.Count: %w", err)
+	}
+	return total, nil
 }
 
 func (r *uploadRepository) List(ctx context.Context, page, pageSize int) ([]entities.Upload, int64, error) {

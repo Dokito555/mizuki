@@ -22,6 +22,7 @@ func (c *RouteConfig) Setup() {
 	api := c.App.Group("/api")
 	{
 		api.GET("/healthcheck", c.HealthController.HealthCheck)
+		api.GET("/stats", c.PcapController.GetStats)
 
 		pcap := api.Group("/pcap")
 		{

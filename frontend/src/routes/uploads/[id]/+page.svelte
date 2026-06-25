@@ -5,12 +5,30 @@
 	import { Button, Card, Progress } from '$lib/components/ui';
 	import { Play, Brain, AlertTriangle, CheckCircle, Clock } from 'lucide-svelte';
 	import { goto } from '$app/navigation';
+	import { showToast } from '$lib/stores/toast.svelte';
 
-	const uploadId = $derived(Number($page.params.id));
-	const uploadQuery = useUpload(() => uploadId);
-	const flowsQuery = useFlows(() => ({ upload_id: uploadId, page_size: 50 }));
+	const rawId = $derived(Number($page.params.id));
+	const uploadId = $derived(isNaN(rawId) ? null : rawId);
+	const uploadQuery = useUpload(() => uploadId!, { enabled: uploadId !== null });
+	const flowsQuery = useFlows(() => ({ upload_id: uploadId!, page_size: 50 }), { enabled: uploadId !== null });
 	const analyzeMutation = useAnalyzeUpload();
 	const aiAnalyzeMutation = useAIAnalyzeUpload();
+
+	async function handleAnalyze() {
+		if (uploadId === null) return;
+		try {
+			await analyzeMutation.mutateAsync(uploadId);
+			showToast('Analysis started', 'success');
+		} catch { /* error toast already shown by Axios interceptor */ }
+	}
+
+	async function handleAIAnalyze() {
+		if (uploadId === null) return;
+		try {
+			await aiAnalyzeMutation.mutateAsync(uploadId);
+			showToast('Batch AI analysis queued', 'success');
+		} catch { /* error toast already shown by Axios interceptor */ }
+	}
 
 	const meta = $derived(uploadQuery.data);
 	const progress = $derived(meta ? meta.progress_pct : 0);
@@ -22,6 +40,10 @@
 <div class="space-y-6">
 	{#if uploadQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
+	{:else if uploadQuery.isError}
+		<Card class="p-4 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+			<p class="text-sm text-red-600 dark:text-red-400">Failed to load upload: {uploadQuery.error?.message}</p>
+		</Card>
 	{:else if uploadQuery.data}
 		<div class="flex items-center justify-between">
 			<div>
@@ -29,10 +51,10 @@
 				<p class="text-sm text-muted-foreground mt-1">Uploaded {new Date(meta.created_at).toLocaleString()}</p>
 			</div>
 			<div class="flex items-center gap-2">
-				<Button onclick={() => analyzeMutation.mutate(uploadId)} variant="outline" size="sm" loading={analyzeMutation.isPending}>
+				<Button onclick={handleAnalyze} variant="outline" size="sm" loading={analyzeMutation.isPending}>
 					<Play class="h-4 w-4 mr-1" /> Analyze
 				</Button>
-				<Button onclick={() => aiAnalyzeMutation.mutate(uploadId)} size="sm" loading={aiAnalyzeMutation.isPending}>
+				<Button onclick={handleAIAnalyze} size="sm" loading={aiAnalyzeMutation.isPending}>
 					<Brain class="h-4 w-4 mr-1" /> AI Analyze
 				</Button>
 			</div>
@@ -78,6 +100,10 @@
 			<h2 class="text-lg font-semibold">Flows</h2>
 			{#if flowsQuery.isPending}
 				<p class="text-sm text-muted-foreground">Loading flows...</p>
+			{:else if flowsQuery.isError}
+				<Card class="p-4 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+					<p class="text-sm text-red-600 dark:text-red-400">Failed to load flows: {flowsQuery.error?.message}</p>
+				</Card>
 			{:else if flowsQuery.data?.data?.length}
 				<div class="overflow-x-auto">
 					<table class="w-full text-sm">

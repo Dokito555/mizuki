@@ -22,6 +22,8 @@ type FlowRepository interface {
 	MarkAIAnalyzed(ctx context.Context, flowID uint, modelName string) error
 	DeleteByUploadID(ctx context.Context, uploadID uint) error
 	CountByUploadID(ctx context.Context, uploadID uint) (int64, error)
+	Count(ctx context.Context) (int64, error)
+	CountByScore(ctx context.Context, minScore float64) (int64, error)
 }
 
 type flowRepository struct {
@@ -165,4 +167,20 @@ func (r *flowRepository) CountByUploadID(ctx context.Context, uploadID uint) (in
 		return 0, fmt.Errorf("flowRepo.CountByUploadID(%d): %w", uploadID, err)
 	}
 	return count, nil
+}
+
+func (r *flowRepository) Count(ctx context.Context) (int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&entities.Flow{}).Count(&total).Error; err != nil {
+		return 0, fmt.Errorf("flowRepo.Count: %w", err)
+	}
+	return total, nil
+}
+
+func (r *flowRepository) CountByScore(ctx context.Context, minScore float64) (int64, error) {
+	var total int64
+	if err := r.db.WithContext(ctx).Model(&entities.Flow{}).Where("score >= ?", minScore).Count(&total).Error; err != nil {
+		return 0, fmt.Errorf("flowRepo.CountByScore: %w", err)
+	}
+	return total, nil
 }

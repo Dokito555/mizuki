@@ -263,6 +263,10 @@ func (s *UploadService) runPipeline(ctx context.Context, uploadID uint, file *os
 	}()
 }
 
+func (s *UploadService) Count(ctx context.Context) (int64, error) {
+	return s.uploadRepo.Count(ctx)
+}
+
 func (s *UploadService) AnalyzeUpload(ctx context.Context, uploadID uint) error {
 	return s.detectionEngine.AnalyzeUpload(ctx, uploadID)
 }

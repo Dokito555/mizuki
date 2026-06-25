@@ -98,6 +98,14 @@ func toFlowResponse(f *entities.Flow) models.FlowResponse {
 	}
 }
 
+func (s *FlowService) CountAll(ctx context.Context) (int64, error) {
+	return s.flowRepo.Count(ctx)
+}
+
+func (s *FlowService) CountThreats(ctx context.Context) (int64, error) {
+	return s.flowRepo.CountByScore(ctx, 50)
+}
+
 func (s *FlowService) DeleteByUploadID(ctx context.Context, uploadID uint) error {
 	return s.flowRepo.DeleteByUploadID(ctx, uploadID)
 }

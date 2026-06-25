@@ -3,11 +3,13 @@
 	import { useFlow } from '$lib/hooks/useFlows';
 	import { useAIAnalysis, useAnalyzeFlow } from '$lib/hooks/useAI';
 	import { Button, Card } from '$lib/components/ui';
+	import { showToast } from '$lib/stores/toast.svelte';
 	import { Brain, Activity, Clock, GitBranch, Wifi, AlertTriangle, Tag } from 'lucide-svelte';
 
-	const flowId = $derived(Number($page.params.id));
-	const flowQuery = useFlow(() => flowId);
-	const aiQuery = useAIAnalysis(() => flowId);
+	const rawId = $derived(Number($page.params.id));
+	const flowId = $derived(isNaN(rawId) ? null : rawId);
+	const flowQuery = useFlow(() => flowId!, { enabled: flowId !== null });
+	const aiQuery = useAIAnalysis(() => flowId!, { enabled: flowId !== null });
 	const analyzeFlowMutation = useAnalyzeFlow();
 
 	function scoreColor(score: number): string {
@@ -18,14 +20,22 @@
 	}
 
 	async function runAI() {
-		await analyzeFlowMutation.mutateAsync(flowId);
-		aiQuery.refetch();
+		if (flowId === null) return;
+		try {
+			await analyzeFlowMutation.mutateAsync(flowId);
+			aiQuery.refetch();
+			showToast('AI analysis requested', 'success');
+		} catch { /* error toast already shown by Axios interceptor */ }
 	}
 </script>
 
 <div class="space-y-6">
 	{#if flowQuery.isPending}
 		<p class="text-muted-foreground">Loading...</p>
+	{:else if flowQuery.isError}
+		<Card class="p-4 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+			<p class="text-sm text-red-600 dark:text-red-400">Failed to load flow: {flowQuery.error?.message}</p>
+		</Card>
 	{:else if flowQuery.data}
 		{@const flow = flowQuery.data}
 		<div class="flex items-center justify-between">

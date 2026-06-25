@@ -130,6 +130,29 @@ func (c *PcapController) AnalyzeUpload(ctx *gin.Context) {
 	WriteJSON(ctx, http.StatusAccepted, gin.H{"message": "analysis started"})
 }
 
+func (c *PcapController) GetStats(ctx *gin.Context) {
+	totalUploads, err := c.uploadService.Count(ctx.Request.Context())
+	if err != nil {
+		c.log.Errorf("get stats uploads: %v", err)
+	}
+
+	totalFlows, err := c.flowService.CountAll(ctx.Request.Context())
+	if err != nil {
+		c.log.Errorf("get stats flows: %v", err)
+	}
+
+	totalThreats, err := c.flowService.CountThreats(ctx.Request.Context())
+	if err != nil {
+		c.log.Errorf("get stats threats: %v", err)
+	}
+
+	WriteJSON(ctx, http.StatusOK, models.StatsResponse{
+		TotalUploads: totalUploads,
+		TotalFlows:   totalFlows,
+		TotalThreats: totalThreats,
+	})
+}
+
 func (c *PcapController) CancelUpload(ctx *gin.Context) {
 	id, err := strconv.ParseUint(ctx.Param("id"), 10, 64)
 	if err != nil {

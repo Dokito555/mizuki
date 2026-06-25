@@ -23,10 +23,10 @@ export const options = {
 	service_worker_options: undefined,
 	server_error_boundaries: false,
 	templates: {
-		app: ({ head, body, assets, nonce, env }) => "<!doctype html>\n<html lang=\"en\" class=\"\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n\t\t<link rel=\"icon\" href=\"" + assets + "/favicon.svg\" />\n\t\t<title>Mizuki — Network Threat Hunter</title>\n\t\t" + head + "\n\t</head>\n\t<body class=\"bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors\">\n\t\t" + body + "\n\t</body>\n</html>\n",
+		app: ({ head, body, assets, nonce, env }) => "<!doctype html>\n<html lang=\"en\" class=\"\">\n\t<head>\n\t\t<meta charset=\"utf-8\" />\n\t\t<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n\t\t<link rel=\"icon\" href=\"" + assets + "/favicon.svg\" />\n\t\t<title>Mizuki</title>\n\t\t" + head + "\n\t</head>\n\t<body class=\"bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors\">\n\t\t" + body + "\n\t</body>\n</html>\n",
 		error
 	},
-	version_hash: "16vmt16"
+	version_hash: "zfze3d"
 };
 
 export async function get_hooks() {

@@ -18,6 +18,12 @@ type Meta struct {
 	TotalPages int   `json:"total_pages"`
 }
 
+type StatsResponse struct {
+	TotalUploads int64 `json:"total_uploads"`
+	TotalFlows   int64 `json:"total_flows"`
+	TotalThreats int64 `json:"total_threats"`
+}
+
 func NewMeta(page, pageSize int, total int64) Meta {
 	if page < 1 {
 		page = 1

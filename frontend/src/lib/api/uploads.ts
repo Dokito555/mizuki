@@ -16,7 +16,8 @@ export async function getUpload(id: number) {
 export async function uploadFile(file: File, force = false) {
 	const form = new FormData();
 	form.append('file', file);
-	const res = await api.post<{ data: Upload }>(`/pcap/upload?force=${force}`, form, {
+	const url = force ? '/pcap/upload?force=true' : '/pcap/upload';
+	const res = await api.post<{ data: Upload }>(url, form, {
 		headers: { 'Content-Type': 'multipart/form-data' },
 	});
 	return res.data.data;

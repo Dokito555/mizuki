@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { useFlows } from '$lib/hooks/useFlows';
-	import { Input, Select, Button } from '$lib/components/ui';
+	import { Input, Select, Button, Card } from '$lib/components/ui';
 	import { goto } from '$app/navigation';
 	import { Search, ArrowUpDown } from 'lucide-svelte';
 
@@ -30,6 +30,20 @@
 
 	function resetFilters() {
 		filters = { src_ip: '', dst_ip: '', protocol: '', min_score: undefined, page: 1, page_size: 20, sort_by: 'score', sort_desc: true };
+	}
+
+	function toggleSort(column: string) {
+		const isSame = filters.sort_by === column;
+		filters = {
+			...filters,
+			sort_by: column,
+			sort_desc: isSame ? !filters.sort_desc : true,
+		};
+	}
+
+	function sortIndicator(column: string): string {
+		if (filters.sort_by !== column) return 'text-muted-foreground';
+		return filters.sort_desc ? 'text-primary-600' : 'text-primary-600';
 	}
 
 	function scoreColor(score: number): string {
@@ -65,18 +79,22 @@
 
 	{#if flowsQuery.isPending}
 		<p class="text-sm text-muted-foreground">Loading...</p>
+	{:else if flowsQuery.isError}
+		<Card class="p-4 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+			<p class="text-sm text-red-600 dark:text-red-400">Failed to load flows: {flowsQuery.error?.message}</p>
+		</Card>
 	{:else if flowsQuery.data?.data?.length}
 		<div class="overflow-x-auto border rounded-lg">
 			<table class="w-full text-sm">
 				<thead class="bg-gray-50 dark:bg-gray-900">
 					<tr>
-						<th class="text-left py-3 px-3 font-medium cursor-pointer hover:text-primary-600" onclick={() => { filters = { ...filters, sort_by: 'src_ip' }; }}>
-							<div class="flex items-center gap-1">Src IP:Port <ArrowUpDown class="h-3 w-3" /></div>
+						<th class="text-left py-3 px-3 font-medium cursor-pointer hover:text-primary-600" onclick={() => toggleSort('src_ip')}>
+							<div class="flex items-center gap-1">Src IP:Port <ArrowUpDown class={"h-3 w-3 " + sortIndicator('src_ip')} /></div>
 						</th>
 						<th class="text-left py-3 px-3 font-medium">Dst IP:Port</th>
 						<th class="text-left py-3 px-3 font-medium">Proto</th>
-						<th class="text-right py-3 px-3 font-medium cursor-pointer hover:text-primary-600" onclick={() => { filters = { ...filters, sort_by: 'score' }; }}>
-							<div class="flex items-center justify-end gap-1">Score <ArrowUpDown class="h-3 w-3" /></div>
+						<th class="text-right py-3 px-3 font-medium cursor-pointer hover:text-primary-600" onclick={() => toggleSort('score')}>
+							<div class="flex items-center justify-end gap-1">Score <ArrowUpDown class={"h-3 w-3 " + sortIndicator('score')} /></div>
 						</th>
 						<th class="text-left py-3 px-3 font-medium">Threats</th>
 						<th class="text-right py-3 px-3 font-medium">Packets</th>

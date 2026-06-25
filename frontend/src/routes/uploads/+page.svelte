@@ -2,8 +2,8 @@
 	import { useUploads, useUploadFile } from '$lib/hooks/useUploads';
 	import { browser } from '$app/environment';
 	import { goto } from '$app/navigation';
-	import { Button, Card, Input } from '$lib/components/ui';
-	import { Upload, Search } from 'lucide-svelte';
+	import { Button, Card } from '$lib/components/ui';
+	import { Upload } from 'lucide-svelte';
 
 	let page = $state(1);
 	let pageSize = 20;
@@ -40,8 +40,12 @@
 
 	async function doUpload(file: File) {
 		if (file.size === 0) return;
-		const result = await uploadMutation.mutateAsync({ file });
-		goto(`/uploads/${result.id}`);
+		try {
+			const result = await uploadMutation.mutateAsync({ file });
+			goto(`/uploads/${result.id}`);
+		} catch {
+			// Error toast already shown by Axios interceptor
+		}
 	}
 
 	function handleFileSelect() {
@@ -68,7 +72,7 @@
 	>
 		<Upload class="h-8 w-8 mx-auto text-muted-foreground" />
 		<p class="mt-2 text-sm font-medium">Drop a PCAP/PCAPNG file here or click to browse</p>
-		<p class="text-xs text-muted-foreground mt-1">Max file size: 500 MB</p>
+		<p class="text-xs text-muted-foreground mt-1">Max file size: 500 MB</p> <!-- matches backend MAX_FILE_SIZE_MB -->
 		<input type="file" accept=".pcap,.pcapng,application/vnd.tcpdump.pcap" class="hidden" bind:this={fileInput} onchange={handleFileSelect} />
 	</div>
 
@@ -76,6 +80,10 @@
 		<h2 class="text-lg font-semibold">All Uploads</h2>
 		{#if uploadsQuery.isPending}
 			<p class="text-sm text-muted-foreground">Loading...</p>
+		{:else if uploadsQuery.isError}
+			<Card class="p-4 border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30">
+				<p class="text-sm text-red-600 dark:text-red-400">Failed to load uploads: {uploadsQuery.error?.message}</p>
+			</Card>
 		{:else if uploadsQuery.data?.data?.length}
 			<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
 				{#each uploadsQuery.data.data as upload}

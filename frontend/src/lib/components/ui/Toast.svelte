@@ -1,19 +1,11 @@
 <script lang="ts">
 	import { cn } from '$lib/utils';
+	import { getToasts, dismiss, showToast } from '$lib/stores/toast.svelte';
 	import { X } from 'lucide-svelte';
 
-	let toasts = $state<{ id: number; message: string; type: 'success' | 'error' | 'info' }[]>([]);
-	let idCounter = 0;
+	export { showToast };
 
-	function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
-		const id = ++idCounter;
-		toasts = [...toasts, { id, message, type }];
-		setTimeout(() => dismiss(id), 5000);
-	}
-
-	function dismiss(id: number) {
-		toasts = toasts.filter((t) => t.id !== id);
-	}
+	let toasts = $derived(getToasts());
 
 	function toastClass(type: string) {
 		return cn(
@@ -25,13 +17,11 @@
 			}
 		);
 	}
-
-	export { showToast };
 </script>
 
-<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+<div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2" style="pointer-events: none">
 	{#each toasts as toast}
-		<div class={toastClass(toast.type)} pointer-events-auto>
+		<div class={toastClass(toast.type)} style="pointer-events: auto">
 			<span>{toast.message}</span>
 			<button class="ml-2 hover:opacity-70" onclick={() => dismiss(toast.id)}>
 				<X class="h-4 w-4" />
